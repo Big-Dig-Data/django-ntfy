@@ -1,0 +1,6 @@
+.cache
+.coverage
+/.pytest_cache
+*.pyc
+.mypy_cache/
+poetry.lock

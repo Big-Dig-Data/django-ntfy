@@ -1,0 +1,52 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true
+target-version = ["py38"]
+
+[tool.ruff]
+line-length = 100
+select = [
+	# Pyflakes
+	"F",
+	# pycodestyle
+	"E",
+	# isort
+	"I",
+]
+src = ["django_ntfy", "tests"]
+
+[tool.ruff.isort]
+known-first-party = ["django_ntfy"]
+
+[tool.pytest.ini_options]
+testpaths = "tests/"
+DJANGO_SETTINGS_MODULE = "tests.settings"
+
+[tool.poetry]
+name = "django-ntfy"
+version = "0.1.0"
+description = "Django's email backend which is used to send messages to ntfy.sh"
+authors = ["Stepan Henek <stepan@bigdigdata.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+Django = ">=4.2.0"
+requests = "^2.31"
+
+[tool.poetry.dev-dependencies]
+black = "23.11.0"
+build = "~1.0.3"
+mypy = "^1.7"
+pre-commit = "~3.5.0"
+pytest = "~7.4.3"
+pytest-cov = "~4.1.0"
+pytest-django = "~4.7.0"
+responses = ">=0.24.0"
+ruff = "~0.1.5"
+types-requests = "*"

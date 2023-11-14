@@ -203,3 +203,45 @@ def test_actions_signal(settings, use_ntfy_email_backend, actions_signal):
             ],
         )
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_priority_settings(settings, use_ntfy_email_backend):
+    settings.NTFY_DEFAULT_PRIORITY = 4
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "priority": 4,
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_priority_signal(settings, use_ntfy_email_backend, priority_signal):
+    settings.NTFY_DEFAULT_PRIORITY = 4
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "priority": 5,
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1

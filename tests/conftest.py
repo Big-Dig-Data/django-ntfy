@@ -84,3 +84,19 @@ def actions_signal():
     yield actions
 
     actions_signal.disconnect(dispatch_uid="test_actions")
+
+
+@pytest.fixture
+def priority_signal():
+    priority = 5
+
+    from django_ntfy import priority_signal
+
+    def handler(*args, **kwargs):
+        return priority
+
+    priority_signal.connect(handler, dispatch_uid="test_icon")
+
+    yield priority
+
+    priority_signal.disconnect(dispatch_uid="test_icon")

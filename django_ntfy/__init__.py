@@ -36,7 +36,7 @@ class NtfyBackend(BaseEmailBackend):
             json={
                 "topic": topic,
                 "title": title,
-                "message": message,
+                "message": message[: getattr(settings, "NTFY_MESSAGE_SIZE_LIMIT", 1000)],
             },
         )
         return resp

@@ -7,7 +7,7 @@ from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
 
 topic_signal = dispatch.Signal()
-# TODO ntfy_icon_signal = dispatch.Signal()
+icon_signal = dispatch.Signal()
 # TODO ntfy_actions_signal = dispatch.Signal()
 # TODO ntfy_severity_signal = dispatch.Signal()
 # TODO ntfy_tags_signal = dispatch.Signal()
@@ -22,33 +22,41 @@ def get_from_signal(signal: dispatch.Signal, message: EmailMessage, default):
 
 
 class NtfyBackend(BaseEmailBackend):
-    def send_ntfy_message(
-        self,
-        title: str,
-        message: str,
-        topic: str,
-    ) -> requests.Response:
+    def get_extra(self, message: EmailMessage):
+        extra = {}
+
+        if icon := get_from_signal(
+            icon_signal, message, getattr(settings, "NTFY_DEFAULT_ICON_URL", None)
+        ):
+            extra["icon"] = icon
+        return extra
+
+    def send_ntfy_message(self, message: EmailMessage) -> requests.Response:
         # TODO ntfy authentication
         url = settings.NTFY_BASE_URL
+        title = message.subject
+        topic = get_from_signal(topic_signal, message, settings.NTFY_DEFAULT_TOPIC)
+        body = message.body
 
         resp = requests.post(
             url,
             json={
                 "topic": topic,
                 "title": title,
-                "message": message[: getattr(settings, "NTFY_MESSAGE_SIZE_LIMIT", 1000)],
+                "message": body[: getattr(settings, "NTFY_MESSAGE_SIZE_LIMIT", 1000)],
+                **self.get_extra(message),
             },
         )
         return resp
 
     def send_ntfy_file(
         self,
-        title: str,
+        message,
         data,
         filename: str,
-        topic: str,
     ):
         # TODO ntfy authentication
+        topic = get_from_signal(topic_signal, message, settings.NTFY_DEFAULT_TOPIC)
         url = f"{settings.NTFY_BASE_URL}/{topic}"
 
         requests.put(
@@ -60,15 +68,13 @@ class NtfyBackend(BaseEmailBackend):
     def send_messages(self, email_messages: typing.List[EmailMessage]):
         count = 0
         for message in email_messages:
-            topic = get_from_signal(topic_signal, message, settings.NTFY_DEFAULT_TOPIC)
-
             # Send message
-            resp = self.send_ntfy_message(message.subject, message.body, topic)
+            resp = self.send_ntfy_message(message)
 
             # Send attachments
             if getattr(settings, 'NTFY_SEND_ATTACHMENTS', False):
                 for filename, content, mimetype in message.attachments:
-                    self.send_ntfy_file(message.subject, content, filename, topic)
+                    self.send_ntfy_file(message, content, filename)
 
             count += 1 if resp.status_code / 100 == 2 else 0
 

@@ -23,7 +23,8 @@ src = ["django_ntfy", "tests"]
 known-first-party = ["django_ntfy"]
 
 [tool.pytest.ini_options]
-testpaths = "tests/"
+pythonpath = "."
+testpaths = "tests"
 DJANGO_SETTINGS_MODULE = "tests.settings"
 
 [tool.poetry]

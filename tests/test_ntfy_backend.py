@@ -87,3 +87,45 @@ def test_attachments(settings, use_ntfy_email_backend):
         message.attach("File1.txt", "Content1", "text/plain")
         message.attach("File2.txt", "Content1", "text/plain")
         message.send()
+
+
+def test_icon_settings(settings, use_ntfy_email_backend):
+    settings.NTFY_DEFAULT_ICON_URL = "https://example.com/favicon.jpg"
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "icon": settings.NTFY_DEFAULT_ICON_URL,
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_icon_signal(settings, use_ntfy_email_backend, icon_signal):
+    settings.NTFY_DEFAULT_ICON_URL = "https://example.com/favicon.jpg"
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "icon": "https://example.com/favicon.ico",
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1

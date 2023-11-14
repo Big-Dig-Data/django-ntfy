@@ -21,3 +21,19 @@ def topic_signal():
     yield topic
 
     topic_signal.disconnect(dispatch_uid="test_topic")
+
+
+@pytest.fixture
+def icon_signal():
+    icon = "https://example.com/favicon.ico"
+
+    from django_ntfy import icon_signal
+
+    def handler(*args, **kwargs):
+        return icon
+
+    icon_signal.connect(handler, dispatch_uid="test_icon")
+
+    yield icon
+
+    icon_signal.disconnect(dispatch_uid="test_icon")

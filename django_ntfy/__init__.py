@@ -9,7 +9,7 @@ from django.core.mail.backends.base import BaseEmailBackend
 topic_signal = dispatch.Signal()
 icon_signal = dispatch.Signal()
 tags_signal = dispatch.Signal()
-# TODO ntfy_actions_signal = dispatch.Signal()
+actions_signal = dispatch.Signal()
 # TODO ntfy_severity_signal = dispatch.Signal()
 # TODO ntfy_priority_signal = dispatch.Signal()
 # TODO ntfy_click_signal = dispatch.Signal()
@@ -33,6 +33,10 @@ class NtfyBackend(BaseEmailBackend):
             tags_signal, message, getattr(settings, "NTFY_DEFAULT_TAGS", None)
         ):
             extra["tags"] = tags
+
+        if actions := get_from_signal(actions_signal, message, None):
+            extra["actions"] = actions
+
         return extra
 
     def send_ntfy_message(self, message: EmailMessage) -> requests.Response:

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 
@@ -53,3 +55,32 @@ def tags_signal():
     yield tags
 
     tags_signal.disconnect(dispatch_uid="test_tags")
+
+
+@pytest.fixture
+def actions_signal():
+    actions = [
+        {
+            "action": "view",
+            "label": "Ok",
+            "url": "https://example.com/ok",
+        },
+        {
+            "action": "http",
+            "label": "Cancel",
+            "url": "https://example.com/cancel",
+            "body": json.dumps({"a": "b"}),
+            "clear": True,
+        },
+    ]
+
+    from django_ntfy import actions_signal
+
+    def handler(*args, **kwargs):
+        return actions
+
+    actions_signal.connect(handler, dispatch_uid="test_actions")
+
+    yield actions
+
+    actions_signal.disconnect(dispatch_uid="test_actions")

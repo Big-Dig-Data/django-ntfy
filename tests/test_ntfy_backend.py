@@ -171,3 +171,35 @@ def test_icon_signal(settings, use_ntfy_email_backend, tags_signal):
             ],
         )
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_actions_signal(settings, use_ntfy_email_backend, actions_signal):
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "actions": [
+                            {
+                                "action": "view",
+                                "label": "Ok",
+                                "url": "https://example.com/ok",
+                            },
+                            {
+                                "action": "http",
+                                "label": "Cancel",
+                                "body": "{\"a\": \"b\"}",
+                                "url": "https://example.com/cancel",
+                                "clear": True,
+                            },
+                        ],
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1

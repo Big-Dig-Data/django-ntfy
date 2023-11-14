@@ -129,3 +129,45 @@ def test_icon_signal(settings, use_ntfy_email_backend, icon_signal):
             ],
         )
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_tags_settings(settings, use_ntfy_email_backend):
+    settings.NTFY_DEFAULT_TAGS = ["rotating_light"]
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "tags": ["rotating_light"],
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_icon_signal(settings, use_ntfy_email_backend, tags_signal):
+    settings.NTFY_DEFAULT_TAGS = ["rotating_light"]
+
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "Body",
+                        "title": "Sub",
+                        "topic": "django-ntfy",
+                        "tags": ["skull", "warning"],
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1

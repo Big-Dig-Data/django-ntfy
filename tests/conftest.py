@@ -37,3 +37,19 @@ def icon_signal():
     yield icon
 
     icon_signal.disconnect(dispatch_uid="test_icon")
+
+
+@pytest.fixture
+def tags_signal():
+    tags = ["skull", "warning"]
+
+    from django_ntfy import tags_signal
+
+    def handler(*args, **kwargs):
+        return tags
+
+    tags_signal.connect(handler, dispatch_uid="test_tags")
+
+    yield tags
+
+    tags_signal.disconnect(dispatch_uid="test_tags")

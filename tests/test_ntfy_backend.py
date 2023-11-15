@@ -3,7 +3,7 @@ from django.core import mail
 from responses import matchers
 
 
-def test_basic(settings, use_ntfy_email_backend):
+def test_basic(settings, use_ntfy_backend):
     with responses.RequestsMock() as rsps:
         rsps.post(
             settings.NTFY_BASE_URL,
@@ -21,7 +21,7 @@ def test_basic(settings, use_ntfy_email_backend):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_custom_topic(settings, use_ntfy_email_backend, topic_signal):
+def test_custom_topic(settings, use_ntfy_backend, topic_signal):
     with responses.RequestsMock() as rsps:
         rsps.post(
             settings.NTFY_BASE_URL,
@@ -39,7 +39,7 @@ def test_custom_topic(settings, use_ntfy_email_backend, topic_signal):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_attachments(settings, use_ntfy_email_backend):
+def test_attachments(settings, use_ntfy_backend):
     settings.NTFY_SEND_ATTACHMENTS = True
 
     with mail.get_connection() as connection, responses.RequestsMock() as rsps:
@@ -89,7 +89,7 @@ def test_attachments(settings, use_ntfy_email_backend):
         message.send()
 
 
-def test_icon_settings(settings, use_ntfy_email_backend):
+def test_icon_settings(settings, use_ntfy_backend):
     settings.NTFY_DEFAULT_ICON_URL = "https://example.com/favicon.jpg"
 
     with responses.RequestsMock() as rsps:
@@ -110,7 +110,7 @@ def test_icon_settings(settings, use_ntfy_email_backend):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_icon_signal(settings, use_ntfy_email_backend, icon_signal):
+def test_icon_signal(settings, use_ntfy_backend, icon_signal):
     settings.NTFY_DEFAULT_ICON_URL = "https://example.com/favicon.jpg"
 
     with responses.RequestsMock() as rsps:
@@ -131,7 +131,7 @@ def test_icon_signal(settings, use_ntfy_email_backend, icon_signal):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_tags_settings(settings, use_ntfy_email_backend):
+def test_tags_settings(settings, use_ntfy_backend):
     settings.NTFY_DEFAULT_TAGS = ["rotating_light"]
 
     with responses.RequestsMock() as rsps:
@@ -152,7 +152,7 @@ def test_tags_settings(settings, use_ntfy_email_backend):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_tags_signal(settings, use_ntfy_email_backend, tags_signal):
+def test_tags_signal(settings, use_ntfy_backend, tags_signal):
     settings.NTFY_DEFAULT_TAGS = ["rotating_light"]
 
     with responses.RequestsMock() as rsps:
@@ -173,7 +173,7 @@ def test_tags_signal(settings, use_ntfy_email_backend, tags_signal):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_actions_signal(settings, use_ntfy_email_backend, actions_signal):
+def test_actions_signal(settings, use_ntfy_backend, actions_signal):
     with responses.RequestsMock() as rsps:
         rsps.post(
             settings.NTFY_BASE_URL,
@@ -205,7 +205,7 @@ def test_actions_signal(settings, use_ntfy_email_backend, actions_signal):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_priority_settings(settings, use_ntfy_email_backend):
+def test_priority_settings(settings, use_ntfy_backend):
     settings.NTFY_DEFAULT_PRIORITY = 4
 
     with responses.RequestsMock() as rsps:
@@ -226,7 +226,7 @@ def test_priority_settings(settings, use_ntfy_email_backend):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_priority_signal(settings, use_ntfy_email_backend, priority_signal):
+def test_priority_signal(settings, use_ntfy_backend, priority_signal):
     settings.NTFY_DEFAULT_PRIORITY = 4
 
     with responses.RequestsMock() as rsps:
@@ -245,3 +245,42 @@ def test_priority_signal(settings, use_ntfy_email_backend, priority_signal):
             ],
         )
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+
+
+def test_exponential_rate_limit(settings, use_ntfy_exponential_ratelimit_backend):
+    def check(sent: bool, subject_suffix: str):
+        if sent:
+            with responses.RequestsMock() as rsps:
+                rsps.post(
+                    settings.NTFY_BASE_URL,
+                    status=200,
+                    match=[
+                        matchers.json_params_matcher(
+                            {
+                                "message": "Body",
+                                "title": "Sub" + subject_suffix,
+                                "topic": "django-ntfy",
+                            }
+                        ),
+                    ],
+                )
+                assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
+        else:
+            assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 0
+
+    check(True, '')
+    check(True, '')
+    check(False, '')
+    check(True, ' (2)')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(True, ' (4)')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(False, '')
+    check(True, ' (8)')

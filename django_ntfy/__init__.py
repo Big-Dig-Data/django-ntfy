@@ -1,10 +1,13 @@
+import math
 import typing
 
 import requests
 from django import dispatch
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
+from django.utils.text import slugify
 
 topic_signal = dispatch.Signal()
 icon_signal = dispatch.Signal()
@@ -17,6 +20,56 @@ priority_signal = dispatch.Signal()
 def get_from_signal(signal: dispatch.Signal, message: EmailMessage, default):
     responses = signal.send(message)
     return responses[0][1] if responses else default
+
+
+class ExponentialRateLimitMixin:
+    CACHE_TIMENOUT = getattr(
+        settings,
+        "EMAIL_EXPONENTIAL_RATE_LIMIT_TIMEOUT",
+        24 * 60 * 60,  # cache will timeout in a day
+    )
+
+    def update_aggregated_count(self, count):
+        if count < 1:
+            return 0
+
+        times = int(math.log(count, 2))
+        return 2 ** (times - 1)
+
+    def cache_key(self, message: EmailMessage):
+        return slugify(f"{message.subject}-{message.from_email}-{'_'.join(message.to)}")
+
+    def send_messages(self, email_messages: typing.List[EmailMessage]):
+        count = 1
+
+        keys = [self.cache_key(m) for m in email_messages]
+        # check whether any of messages reaches
+
+        count = max(1, *[cache.get(k, 1) for k in keys])
+
+        times = math.log(count, 2)
+        if times.is_integer():
+            # update subject if message were aggregated
+            aggregated = self.update_aggregated_count(count)
+            if aggregated > 1:
+                for message in email_messages:
+                    message.subject += f" ({aggregated})"
+
+            res = super().send_messages(email_messages)  # noqa
+            if not res:
+                # Don't update cache when no message was sent
+                return res
+        else:
+            res = 0
+
+        count += 1
+
+        # update counters
+        for key in keys:
+            # Set all cached to new max
+            cache.set(key, count, timeout=self.CACHE_TIMENOUT)
+
+        return res
 
 
 class NtfyBackend(BaseEmailBackend):
@@ -91,3 +144,7 @@ class NtfyBackend(BaseEmailBackend):
             count += 1 if resp.status_code / 100 == 2 else 0
 
         return count
+
+
+class NtfyBackendExponentialRateLimitBackend(ExponentialRateLimitMixin, NtfyBackend):
+    pass

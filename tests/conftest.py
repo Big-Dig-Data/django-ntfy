@@ -4,9 +4,15 @@ import pytest
 
 
 @pytest.fixture
-def use_ntfy_email_backend(settings):
+def use_ntfy_backend(settings):
     # we need to explicitly override it here
     settings.EMAIL_BACKEND = 'django_ntfy.NtfyBackend'
+
+
+@pytest.fixture
+def use_ntfy_exponential_ratelimit_backend(settings):
+    # we need to explicitly override it here
+    settings.EMAIL_BACKEND = 'django_ntfy.NtfyBackendExponentialRateLimitBackend'
 
 
 @pytest.fixture

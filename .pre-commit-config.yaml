@@ -1,0 +1,24 @@
+default_stages: [push, commit]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+    - id: trailing-whitespace
+      exclude: '^.*\.(csv|tsv|json|svg)'
+    - id: end-of-file-fixer
+      exclude: '^.*\.(csv|tsv|json|svg)'
+    - id: check-yaml
+
+  - repo: local
+    hooks:
+    - id: black
+      name: "Python: Black formatter"
+      entry: poetry run black --check
+      language: system
+      types: [python]
+
+    - id: ruff
+      name: "Python: Ruff linter"
+      entry: poetry run ruff check
+      language: system
+      types: [python]

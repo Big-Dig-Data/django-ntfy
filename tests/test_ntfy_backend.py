@@ -247,7 +247,7 @@ def test_priority_signal(settings, use_ntfy_backend, priority_signal):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_exponential_rate_limit(settings, use_ntfy_exponential_ratelimit_backend):
+def test_exponential_rate_limit(settings, use_ntfy_exponential_ratelimit_backend, clear_cache):
     def check(sent: bool, subject_suffix: str):
         if sent:
             with responses.RequestsMock() as rsps:

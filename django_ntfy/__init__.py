@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
+from django.core.mail.backends.smtp import EmailBackend
 from django.utils.text import slugify
 
 topic_signal = dispatch.Signal()
@@ -23,12 +24,6 @@ def get_from_signal(signal: dispatch.Signal, message: EmailMessage, default):
 
 
 class ExponentialRateLimitMixin:
-    CACHE_TIMENOUT = getattr(
-        settings,
-        "EMAIL_EXPONENTIAL_RATE_LIMIT_TIMEOUT",
-        24 * 60 * 60,  # cache will timeout in a day
-    )
-
     def update_aggregated_count(self, count):
         if count < 1:
             return 0
@@ -40,6 +35,12 @@ class ExponentialRateLimitMixin:
         return slugify(f"{message.subject}-{message.from_email}-{'_'.join(message.to)}")
 
     def send_messages(self, email_messages: typing.List[EmailMessage]):
+        cache_timenout = getattr(
+            settings,
+            "EMAIL_EXPONENTIAL_RATE_LIMIT_TIMEOUT",
+            24 * 60 * 60,  # cache will timeout in a day
+        )
+
         count = 1
 
         keys = [self.cache_key(m) for m in email_messages]
@@ -67,7 +68,7 @@ class ExponentialRateLimitMixin:
         # update counters
         for key in keys:
             # Set all cached to new max
-            cache.set(key, count, timeout=self.CACHE_TIMENOUT)
+            cache.set(key, count, timeout=cache_timenout)
 
         return res
 
@@ -147,4 +148,8 @@ class NtfyBackend(BaseEmailBackend):
 
 
 class NtfyBackendExponentialRateLimitBackend(ExponentialRateLimitMixin, NtfyBackend):
+    pass
+
+
+class ExponentialRateLimitEmailBackend(ExponentialRateLimitMixin, EmailBackend):
     pass

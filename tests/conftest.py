@@ -10,6 +10,12 @@ def use_ntfy_backend(settings):
 
 
 @pytest.fixture
+def use_exponential_ratelimit_backend(settings):
+    # we need to explicitly override it here
+    settings.EMAIL_BACKEND = 'django_ntfy.ExponentialRateLimitEmailBackend'
+
+
+@pytest.fixture
 def use_ntfy_exponential_ratelimit_backend(settings):
     # we need to explicitly override it here
     settings.EMAIL_BACKEND = 'django_ntfy.NtfyBackendExponentialRateLimitBackend'
@@ -106,3 +112,10 @@ def priority_signal():
     yield priority
 
     priority_signal.disconnect(dispatch_uid="test_icon")
+
+
+@pytest.fixture
+def clear_cache():
+    from django.core.cache import cache
+
+    cache.clear()

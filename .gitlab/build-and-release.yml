@@ -1,0 +1,32 @@
+.version_tags_only: &version_tags_only
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9].*/'
+      when: on_success
+    - when: never
+
+build:build:
+  stage: build
+  image: $IMAGE
+  parallel:
+    matrix:
+      - IMAGE: ['python:3.8', 'python:3.9']
+  needs: ["tests:run_tests", "lints:pre_commit"]
+  before_script:
+    - curl -sSL https://install.python-poetry.org | python3 -
+    - export PATH="$HOME/.local/bin:$PATH"
+    - pip install build
+  script:
+    - python3 -m build --sdist --wheel
+  artifacts:
+    paths:
+      - dist/
+  <<: *version_tags_only
+
+release:publish:
+  stage: release
+  image: python:3
+  needs: ["build:build"]
+  script:
+    - pip install twine
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*
+  <<: *version_tags_only

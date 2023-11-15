@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.backends.smtp import EmailBackend
+from django.utils.module_loading import import_string
 from django.utils.text import slugify
 
 topic_signal = dispatch.Signal()
@@ -32,7 +33,11 @@ class ExponentialRateLimitMixin:
         return 2 ** (times - 1)
 
     def cache_key(self, message: EmailMessage):
-        return slugify(f"{message.subject}-{message.from_email}-{'_'.join(message.to)}")
+        cls = type(self)
+        return slugify(
+            f"{cls.__module__}-{cls.__name__}-{message.subject}-"
+            f"{message.from_email}-{'_'.join(message.to)}"
+        )
 
     def send_messages(self, email_messages: typing.List[EmailMessage]):
         cache_timenout = getattr(
@@ -52,11 +57,18 @@ class ExponentialRateLimitMixin:
         if times.is_integer():
             # update subject if message were aggregated
             aggregated = self.update_aggregated_count(count)
+
             if aggregated > 1:
                 for message in email_messages:
                     message.subject += f" ({aggregated})"
 
             res = super().send_messages(email_messages)  # noqa
+
+            # remove aggreated from subjects
+            if aggregated > 1:
+                for message in email_messages:
+                    message.subject = message.subject[: len(f" ({aggregated})") - 1]
+
             if not res:
                 # Don't update cache when no message was sent
                 return res
@@ -151,5 +163,31 @@ class NtfyBackendExponentialRateLimitBackend(ExponentialRateLimitMixin, NtfyBack
     pass
 
 
-class ExponentialRateLimitEmailBackend(ExponentialRateLimitMixin, EmailBackend):
+class SmtpExponentialRateLimitEmailBackend(ExponentialRateLimitMixin, EmailBackend):
     pass
+
+
+class ExponentialRateLimitBackends(BaseEmailBackend):
+    def __init__(self, *args, **kwargs):
+        backend_strings = getattr(
+            settings,
+            "EMAIL_EXPONENTIAL_RATE_LIMIT_BACKENDS",
+        )
+        backend_classes = [import_string(e) for e in backend_strings]
+        limited_backend_classes = [
+            type(f"ExponentialRateLimit{e.__name__}", (ExponentialRateLimitMixin, e), {})
+            for e in backend_classes
+        ]
+
+        self.backends = [cls(*args, **kwargs) for cls in limited_backend_classes]
+
+    def open(self):
+        for backend in self.backends:
+            backend.open()
+
+    def close(self):
+        for backend in self.backends:
+            backend.close()
+
+    def send_messages(self, email_messages):
+        return sum(e.send_messages(email_messages) for e in self.backends)

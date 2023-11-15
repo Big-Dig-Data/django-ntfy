@@ -4,7 +4,7 @@ from django_ntfy import EmailBackend
 
 
 def test_exponential_rate_limit(
-    settings, use_exponential_ratelimit_backend, monkeypatch, clear_cache
+    settings, use_smtp_exponential_ratelimit_backend, monkeypatch, clear_cache
 ):
     def check(sent: bool, subject_suffix: str):
         tmp = {"called": False}

@@ -152,7 +152,7 @@ def test_tags_settings(settings, use_ntfy_email_backend):
         assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1
 
 
-def test_icon_signal(settings, use_ntfy_email_backend, tags_signal):
+def test_tags_signal(settings, use_ntfy_email_backend, tags_signal):
     settings.NTFY_DEFAULT_TAGS = ["rotating_light"]
 
     with responses.RequestsMock() as rsps:

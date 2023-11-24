@@ -25,7 +25,7 @@ def get_from_signal(signal: dispatch.Signal, message: EmailMessage, default):
 
 
 class ExponentialRateLimitMixin:
-    def update_aggregated_count(self, count):
+    def get_aggregated_count(self, count):
         if count < 1:
             return 0
 
@@ -40,49 +40,39 @@ class ExponentialRateLimitMixin:
         )
 
     def send_messages(self, email_messages: typing.List[EmailMessage]):
+        sent_count = 0
         cache_timenout = getattr(
             settings,
             "EMAIL_EXPONENTIAL_RATE_LIMIT_TIMEOUT",
             24 * 60 * 60,  # cache will timeout in a day
         )
 
-        count = 1
+        for message in email_messages:
+            # get from cache
+            key = self.cache_key(message)
+            count = cache.get(key, 1)
 
-        keys = [self.cache_key(m) for m in email_messages]
-        # check whether any of messages reaches
+            # calculate aggregations
+            times = math.log(count, 2)
 
-        count = max(1, *[cache.get(k, 1) for k in keys])
+            # Check whether message should be sent
+            if times.is_integer():
+                aggregated = self.get_aggregated_count(count)
 
-        times = math.log(count, 2)
-        if times.is_integer():
-            # update subject if message were aggregated
-            aggregated = self.update_aggregated_count(count)
-
-            if aggregated > 1:
-                for message in email_messages:
+                if aggregated > 1:
                     message.subject += f" ({aggregated})"
 
-            res = super().send_messages(email_messages)  # noqa
+                if new_sent := super().send_messages(email_messages):  # noqa
+                    sent_count += new_sent
+                    cache.set(key, count + 1, timeout=cache_timenout)
 
-            # remove aggreated from subjects
-            if aggregated > 1:
-                for message in email_messages:
+                # remove aggreated from subjects
+                if aggregated > 1:
                     message.subject = message.subject[: len(f" ({aggregated})") - 1]
+            else:
+                cache.set(key, count + 1, timeout=cache_timenout)
 
-            if not res:
-                # Don't update cache when no message was sent
-                return res
-        else:
-            res = 0
-
-        count += 1
-
-        # update counters
-        for key in keys:
-            # Set all cached to new max
-            cache.set(key, count, timeout=cache_timenout)
-
-        return res
+        return sent_count
 
 
 class NtfyBackend(BaseEmailBackend):

@@ -29,7 +29,7 @@ DJANGO_SETTINGS_MODULE = "tests.settings"
 
 [tool.poetry]
 name = "django-ntfy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Django's email backend which is used to send messages to ntfy.sh"
 authors = ["Stepan Henek <stepan@bigdigdata.com>"]
 license = "MIT"

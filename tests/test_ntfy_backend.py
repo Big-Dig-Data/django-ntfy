@@ -284,3 +284,22 @@ def test_exponential_rate_limit(settings, use_ntfy_exponential_ratelimit_backend
     check(False, '')
     check(False, '')
     check(True, ' (8)')
+
+
+def test_empty_body(settings, use_ntfy_backend):
+    settings.NTFY_MESSAGE_SIZE_LIMIT = 0
+    with responses.RequestsMock() as rsps:
+        rsps.post(
+            settings.NTFY_BASE_URL,
+            status=200,
+            match=[
+                matchers.json_params_matcher(
+                    {
+                        "message": "",
+                        "title": "Sub",
+                        "topic": "django-ntfy",  # Default topic from settings
+                    }
+                ),
+            ],
+        )
+        assert mail.send_mail("Sub", "Body", "from@example.com", ["to@example.com"]) == 1

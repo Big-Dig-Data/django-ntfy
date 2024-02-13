@@ -32,6 +32,7 @@ name = "django-ntfy"
 version = "0.1.1"
 description = "Django's email backend which is used to send messages to ntfy.sh"
 authors = ["Stepan Henek <stepan@bigdigdata.com>"]
+repository = "https://github.com/Big-Dig-Data/django-ntfy"
 license = "MIT"
 classifiers = [
 	"Programming Language :: Python :: 3",

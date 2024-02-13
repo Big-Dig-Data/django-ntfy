@@ -7,7 +7,6 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
-from django.core.mail.backends.smtp import EmailBackend
 from django.utils.module_loading import import_string
 from django.utils.text import slugify
 
@@ -147,14 +146,6 @@ class NtfyBackend(BaseEmailBackend):
             count += 1 if resp.status_code / 100 == 2 else 0
 
         return count
-
-
-class NtfyBackendExponentialRateLimitBackend(ExponentialRateLimitMixin, NtfyBackend):
-    pass
-
-
-class SmtpExponentialRateLimitEmailBackend(ExponentialRateLimitMixin, EmailBackend):
-    pass
 
 
 class ExponentialRateLimitBackends(BaseEmailBackend):

@@ -10,18 +10,6 @@ def use_ntfy_backend(settings):
 
 
 @pytest.fixture
-def use_smtp_exponential_ratelimit_backend(settings):
-    # we need to explicitly override it here
-    settings.EMAIL_BACKEND = 'django_ntfy.SmtpExponentialRateLimitEmailBackend'
-
-
-@pytest.fixture
-def use_ntfy_exponential_ratelimit_backend(settings):
-    # we need to explicitly override it here
-    settings.EMAIL_BACKEND = 'django_ntfy.NtfyBackendExponentialRateLimitBackend'
-
-
-@pytest.fixture
 def use_exponential_ratelimit_backends(settings):
     # we need to explicitly override it here
     settings.EMAIL_BACKEND = 'django_ntfy.ExponentialRateLimitBackends'
